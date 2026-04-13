@@ -7,3 +7,12 @@
 body {
   font-family: sans-serif;
 }
+
+::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+select option {
+  background-color: #1a1a2e;
+  color: #fff;
+}
