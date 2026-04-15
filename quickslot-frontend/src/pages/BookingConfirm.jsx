@@ -387,11 +387,11 @@ if (remaining <= 0) {
     : "—";
 
   const reservedAt = reservation?.reserved_at
-    ? new Date(reservation.reserved_at).toLocaleString([], {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
-    : "—";
+  ? new Date(reservation.reserved_at + "Z").toLocaleString([], {
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
+  : "—";
 
   return (
     <div style={styles.page}>
