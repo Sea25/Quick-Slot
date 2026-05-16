@@ -115,6 +115,11 @@ export default function MyTickets() {
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-muted)' }}>
                   {ticket.location_name} · Slot {ticket.slot_number}
                 </p>
+                {ticket.vehicle_number && (
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
+                    🚗 {ticket.vehicle_number} · {ticket.vehicle_type} · {ticket.vehicle_color}
+                  </p>
+                )}
               </div>
               <span
                 className={`badge ${

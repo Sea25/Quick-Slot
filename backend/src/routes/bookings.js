@@ -8,10 +8,21 @@ const router = Router();
 
 router.post('/', validateUser, async (req, res) => {
   try {
-    const { lot_id, booking_date, start_time, duration_hours } = req.body;
+    const { lot_id, vehicle_id, booking_date, start_time, duration_hours } = req.body;
 
-    if (!lot_id || !booking_date || !start_time || !duration_hours) {
-      return res.status(400).json({ error: 'Missing booking fields' });
+    if (!lot_id || !vehicle_id || !booking_date || !start_time || !duration_hours) {
+      return res.status(400).json({ error: 'Please select a vehicle and fill all booking details' });
+    }
+
+    const { data: vehicle } = await supabase
+      .from('vehicles')
+      .select('id')
+      .eq('id', vehicle_id)
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
+    if (!vehicle) {
+      return res.status(400).json({ error: 'Selected vehicle not found. Add a vehicle first.' });
     }
 
     if (!isConfigured) {
@@ -55,6 +66,7 @@ router.post('/', validateUser, async (req, res) => {
       .from('bookings')
       .insert({
         user_id: req.userId,
+        vehicle_id,
         slot_id: freeSlot.id,
         booking_date,
         start_time: start,
@@ -119,6 +131,11 @@ router.get('/my-tickets', validateUser, async (req, res) => {
         payment_status,
         qr_code_hash,
         created_at,
+        vehicles (
+          vehicle_number,
+          vehicle_type,
+          color
+        ),
         slots (
           slot_number,
           parking_lots (
@@ -148,6 +165,9 @@ router.get('/my-tickets', validateUser, async (req, res) => {
       slot_number: b.slots?.slot_number,
       lot_name: b.slots?.parking_lots?.name,
       location_name: b.slots?.parking_lots?.location_name,
+      vehicle_number: b.vehicles?.vehicle_number,
+      vehicle_type: b.vehicles?.vehicle_type,
+      vehicle_color: b.vehicles?.color,
     }));
 
     return res.json({ tickets });

@@ -16,8 +16,9 @@ Quick-Slot/
 ### 1. Database (Supabase)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run `database/schema.sql` then `database/seed.sql` in the SQL Editor.
-3. Copy **Project URL** and **service_role** key.
+2. SQL Editor: run **`database/drop.sql`**, then **`database/setup.sql`**.
+3. Copy **Project URL** and **service_role** key into `backend/.env`.
+4. **Logout → sign in again** in the app after any DB reset.
 
 ### 2. Backend
 
@@ -64,8 +65,6 @@ App: `http://localhost:5173` (proxies `/api` to backend)
 ## DBMS highlights
 
 - 5 tables with foreign keys: `users`, `vehicles`, `parking_lots`, `slots`, `bookings`
-
-**Already set up the DB?** Run `database/migrations/002_vehicles.sql` in Supabase to add the vehicles table.
 - Trigger prevents double-booking on overlapping times
 - Relational JOIN for My Tickets (`bookings` → `slots` → `parking_lots`)
 

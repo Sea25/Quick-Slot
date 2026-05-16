@@ -3,6 +3,17 @@ import { supabase, isConfigured } from '../config/supabase.js';
 
 const router = Router();
 
+function friendlyDbError(err) {
+  const msg = err?.message || '';
+  if (msg.includes("Could not find the table") && msg.includes('users')) {
+    return 'Database not set up. Run database/drop.sql then database/setup.sql in Supabase SQL Editor.';
+  }
+  if (msg.includes('schema cache')) {
+    return 'Database is still loading. Wait 30 seconds after running setup.sql, then try again.';
+  }
+  return msg || 'Login failed';
+}
+
 router.post('/login', async (req, res) => {
   try {
     const { name, mobile_number } = req.body;
@@ -43,7 +54,7 @@ router.post('/login', async (req, res) => {
     return res.json({ user: created, isNew: true });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: err.message || 'Login failed' });
+    return res.status(500).json({ error: friendlyDbError(err) });
   }
 });
 

@@ -30,6 +30,8 @@ export default function SlotDetail() {
   const search = getSearchParams();
 
   const [lot, setLot] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
@@ -44,19 +46,30 @@ export default function SlotDetail() {
       return;
     }
 
-    api
-      .getLot(lotId)
-      .then(({ lot: lotData }) => setLot(lotData))
+    Promise.all([api.getLot(lotId), api.getVehicles()])
+      .then(([{ lot: lotData }, { vehicles: vehicleList }]) => {
+        setLot(lotData);
+        setVehicles(vehicleList || []);
+        if (vehicleList?.length === 1) {
+          setSelectedVehicleId(vehicleList[0].id);
+        }
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [lotId, navigate, search.date]);
 
-  const handleContinue = async () => {
+  const handleConfirm = async () => {
+    if (!selectedVehicleId) {
+      setError('Please select which vehicle you are bringing.');
+      return;
+    }
+
     setError('');
     setBooking(true);
     try {
       const { booking: created } = await api.createBooking({
         lot_id: lotId,
+        vehicle_id: selectedVehicleId,
         booking_date: search.date,
         start_time: search.startTime,
         duration_hours: duration,
@@ -103,7 +116,7 @@ export default function SlotDetail() {
         <p style={{ margin: '0 0 1rem', lineHeight: 1.6, color: 'var(--color-muted)' }}>
           {lot.description || 'Secure parking with pre-booking and digital QR check-in.'}
         </p>
-        <p className="list-item-meta" style={{ marginBottom: '1rem' }}>
+        <p className="list-item-meta" style={{ marginBottom: '1.25rem' }}>
           <span>
             <strong>{Number(lot.distance_km).toFixed(1)} km</strong>
           </span>
@@ -138,15 +151,52 @@ export default function SlotDetail() {
           </p>
         </dl>
 
-        {error && <p className="error-banner">{error}</p>}
+        <h3 style={{ fontSize: '0.9rem', margin: '1.25rem 0 0.75rem' }}>
+          Which vehicle are you bringing?
+        </h3>
+
+        {vehicles.length === 0 ? (
+          <div className="empty-state" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+            <p style={{ margin: '0 0 1rem' }}>No vehicles saved yet.</p>
+            <button type="button" className="btn btn-ghost" onClick={() => navigate('/vehicle')}>
+              Add a vehicle first
+            </button>
+          </div>
+        ) : (
+          <div className="vehicle-pick-list">
+            {vehicles.map((v) => (
+              <label
+                key={v.id}
+                className={`vehicle-pick ${selectedVehicleId === v.id ? 'vehicle-pick--selected' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="vehicle"
+                  value={v.id}
+                  checked={selectedVehicleId === v.id}
+                  onChange={() => setSelectedVehicleId(v.id)}
+                />
+                <span className="vehicle-pick-body">
+                  <strong>{v.vehicle_number}</strong>
+                  <span>
+                    {v.vehicle_type} · {v.color}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {error && <p className="error-banner" style={{ marginTop: '1rem' }}>{error}</p>}
 
         <button
           type="button"
           className="btn btn-primary"
-          disabled={booking}
-          onClick={handleContinue}
+          style={{ marginTop: '1.25rem' }}
+          disabled={booking || vehicles.length === 0 || !selectedVehicleId}
+          onClick={handleConfirm}
         >
-          {booking ? 'Reserving…' : 'Continue to Pay'}
+          {booking ? 'Confirming…' : 'Confirm booking & pay'}
         </button>
       </section>
     </Layout>

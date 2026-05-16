@@ -1,30 +1,33 @@
-# QUICKSLOT Database
+# QuickSlot Database
 
-PostgreSQL schema and seed data for Supabase (or any PostgreSQL host).
+Only **2 files**. Run in Supabase **SQL Editor** in this order:
 
-## Setup
+| Order | File | What it does |
+|-------|------|----------------|
+| 1 | `drop.sql` | Deletes all tables |
+| 2 | `setup.sql` | Creates tables + sample data |
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor** → **New query**.
-3. Paste and run `schema.sql`, then `seed.sql`.
-4. Copy **Project URL** and **service_role** key (Settings → API) into `backend/.env`.
+After running both: **Logout** in the app → **sign in again**.
 
-## Tables
+---
 
-| Table | Purpose |
-|-------|---------|
-| `users` | Name + mobile login identity |
-| `parking_lots` | Locations, rates, distance |
-| `slots` | Individual spaces per lot |
-| `bookings` | Reservations, payment, QR hash |
-| `vehicles` | User vehicles (number, type, colour) |
+## Tables (for viva)
 
-## Double-booking protection
+| Table | Stores |
+|-------|--------|
+| `users` | Name, mobile number |
+| `vehicles` | Car number, type, colour (linked to user) |
+| `parking_lots` | Parking place name, rate, distance |
+| `slots` | Each space in a lot (A1, B1, …) |
+| `bookings` | Date, time, payment, QR code (links to `vehicles`) |
 
-Trigger `trg_prevent_double_booking` blocks overlapping `start_time` / `end_time` on the same `slot_id` and `booking_date` when `payment_status` is not `cancelled`.
+## Important words (simple meaning)
 
-## ER relationships
-
-- `users` 1 → N `bookings`
-- `parking_lots` 1 → N `slots`
-- `slots` 1 → N `bookings`
+- **PRIMARY KEY** → unique ID for each row  
+- **FOREIGN KEY** → links one table to another (e.g. `user_id` → `users`)  
+- **REFERENCES** → which table the foreign key points to  
+- **ON DELETE CASCADE** → if parent row is deleted, child rows are deleted too  
+- **UNIQUE** → no duplicate values allowed in that column  
+- **TRIGGER** → automatic rule that runs before save (stops double booking)  
+- **INSERT** → add new rows (sample parking data)  
+- **CHECK** → only allowed values (e.g. payment must be pending, paid, or cancelled)

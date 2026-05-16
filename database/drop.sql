@@ -1,0 +1,12 @@
+-- STEP 1: Run this first — deletes ALL QuickSlot tables and data
+-- Safe to run even when tables do not exist yet
+
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS vehicles CASCADE;
+DROP TABLE IF EXISTS slots CASCADE;
+DROP TABLE IF EXISTS parking_lots CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+DROP FUNCTION IF EXISTS prevent_slot_double_booking() CASCADE;
+
+NOTIFY pgrst, 'reload schema';
