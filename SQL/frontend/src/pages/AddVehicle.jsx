@@ -15,7 +15,9 @@ export default function AddVehicle() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
+  // Load all vehicles belonging to the logged-in user on page open
   useEffect(() => {
     api
       .getVehicles()
@@ -24,6 +26,7 @@ export default function AddVehicle() {
       .finally(() => setListLoading(false));
   }, []);
 
+  // Add a new vehicle
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -44,6 +47,21 @@ export default function AddVehicle() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete a vehicle and remove it from the list
+  const handleDelete = async (id) => {
+    if (!window.confirm('Remove this vehicle?')) return;
+    setDeletingId(id);
+    try {
+      await api.deleteVehicle(id);
+      setVehicles((prev) => prev.filter((v) => v.id !== id));
+      setSuccess('Vehicle removed.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -115,7 +133,11 @@ export default function AddVehicle() {
             <p className="page-subtitle">No vehicles yet. Add one using the form.</p>
           )}
           {vehicles.map((v) => (
-            <div key={v.id} className="vehicle-chip">
+            <div
+              key={v.id}
+              className="vehicle-chip"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
               <div>
                 <strong>{v.vehicle_number}</strong>
                 <br />
@@ -123,6 +145,22 @@ export default function AddVehicle() {
                   {v.vehicle_type} · {v.color}
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => handleDelete(v.id)}
+                disabled={deletingId === v.id}
+                style={{
+                  background: 'none',
+                  border: '1px solid #e55',
+                  color: '#e55',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                }}
+              >
+                {deletingId === v.id ? '…' : 'Remove'}
+              </button>
             </div>
           ))}
         </aside>

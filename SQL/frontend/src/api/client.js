@@ -62,4 +62,7 @@ export const api = {
 
   addVehicle: (body) =>
     request('/vehicles', { method: 'POST', body: JSON.stringify(body) }),
+
+  deleteVehicle: (id) =>
+    request(`/vehicles/${id}`, { method: 'DELETE' }),
 };

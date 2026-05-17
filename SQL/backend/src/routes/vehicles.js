@@ -57,4 +57,41 @@ router.post('/', validateUser, async (req, res) => {
   }
 });
 
+// Delete a vehicle by ID (only the owner can delete their own vehicle)
+router.delete('/:id', validateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isConfigured) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+
+    // First check the vehicle belongs to this user
+    const { data: existing } = await supabase
+      .from('vehicles')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+
+    // Delete the vehicle record from the database
+    const { error } = await supabase
+      .from('vehicles')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.userId);
+
+    if (error) throw error;
+
+    return res.json({ message: 'Vehicle deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message || 'Failed to delete vehicle' });
+  }
+});
+
 export default router;

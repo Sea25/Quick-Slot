@@ -1,3 +1,6 @@
+// Entry point for the QuickSlot Express server
+// Loads environment variables, registers middleware, and mounts all route handlers
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -12,13 +15,18 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Allow cross-origin requests from the React frontend
 app.use(cors());
+
+// Parse incoming JSON request bodies
 app.use(express.json());
 
+// Simple health check endpoint — useful for deployment checks
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', database: isConfigured ? 'connected' : 'not configured' });
 });
 
+// Route handlers for each resource
 app.use('/api/auth', authRoutes);
 app.use('/api/parking', parkingRoutes);
 app.use('/api/bookings', bookingRoutes);

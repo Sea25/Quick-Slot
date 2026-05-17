@@ -1,3 +1,8 @@
+-- QuickSlot Database Setup
+-- Run drop.sql first to clear any old data, then run this file.
+-- Tables: users, vehicles, parking_lots, slots, bookings
+-- Also creates a trigger to prevent double-booking of the same slot.
+
 -- ============================================================
 -- STEP 2: Run this AFTER drop.sql
 -- Creates all tables + sample data for QuickSlot
