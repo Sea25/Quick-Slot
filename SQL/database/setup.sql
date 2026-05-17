@@ -1,13 +1,6 @@
--- QuickSlot Database Setup
--- Run drop.sql first to clear any old data, then run this file.
--- Tables: users, vehicles, parking_lots, slots, bookings
--- Also creates a trigger to prevent double-booking of the same slot.
-
 -- ============================================================
--- STEP 2: Run this AFTER drop.sql
--- Creates all tables + sample data for QuickSlot
+-- QUICKSLOT - Smart Car Parking System
 -- ============================================================
-
 -- ------------------------------------------------------------
 -- TABLE 1: users (login with name + mobile)
 -- ------------------------------------------------------------
@@ -20,7 +13,6 @@ CREATE TABLE users (
 
 -- ------------------------------------------------------------
 -- TABLE 2: vehicles (cars linked to a user)
--- user_id = FOREIGN KEY → links to users table
 -- ------------------------------------------------------------
 CREATE TABLE vehicles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -78,13 +70,20 @@ CREATE TABLE bookings (
   CHECK (end_time > start_time)
 );
 
+
+-- ============================================================
+-- TRIGGERS & FUNCTIONS
+-- ============================================================
+
 -- ------------------------------------------------------------
--- RULE: stop two bookings on the same slot at the same time
--- (Trigger = automatic check before INSERT or UPDATE)
+-- TRIGGER 1: Prevent double booking on same slot + time
+-- Also auto-updates is_available on the slot
+-- (Runs automatically BEFORE every INSERT or UPDATE on bookings)
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION prevent_slot_double_booking()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Check for overlapping active bookings on the same slot
   IF EXISTS (
     SELECT 1
     FROM bookings
@@ -97,6 +96,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'This slot is already booked for that time';
   END IF;
+
+  -- Mark slot as unavailable when a new booking is made or updated to paid/pending
+  IF NEW.payment_status <> 'cancelled' THEN
+    UPDATE slots SET is_available = FALSE WHERE id = NEW.slot_id;
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -107,33 +112,237 @@ FOR EACH ROW
 EXECUTE FUNCTION prevent_slot_double_booking();
 
 -- ------------------------------------------------------------
+-- TRIGGER 2: Auto-restore slot availability when booking is cancelled
+-- (Runs automatically AFTER UPDATE on bookings)
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION restore_slot_on_cancel()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- When a booking is cancelled, check if any other active bookings
+  -- exist for that slot on that date. If none, mark slot as available.
+  IF NEW.payment_status = 'cancelled' AND OLD.payment_status <> 'cancelled' THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM bookings
+      WHERE slot_id = NEW.slot_id
+        AND booking_date = NEW.booking_date
+        AND payment_status <> 'cancelled'
+        AND id <> NEW.id
+    ) THEN
+      UPDATE slots SET is_available = TRUE WHERE id = NEW.slot_id;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_restore_slot_on_cancel
+AFTER UPDATE ON bookings
+FOR EACH ROW
+EXECUTE FUNCTION restore_slot_on_cancel();
+
+
+-- ============================================================
+-- SAMPLE DATA
+-- ============================================================
+
+-- ------------------------------------------------------------
 -- Sample data: 5 parking lots
 -- ------------------------------------------------------------
 INSERT INTO parking_lots (name, location_name, description, hourly_rate, distance_km)
 VALUES
-  ('Kochi Mall Parking', 'MG Road, Kochi', 'Covered parking with security and EV charging.', 45.00, 0.8),
-  ('Tech Park Central', 'Kakkanad, Kochi', 'Parking for office workers with CCTV.', 35.00, 1.5),
-  ('Marine Drive Plaza', 'Marine Drive, Kochi', 'Waterfront parking near the city.', 60.00, 2.2),
-  ('Railway Station West', 'Ernakulam Junction', 'Parking near railway station.', 25.00, 3.0),
-  ('Lulu Hypermarket Lot', 'Edappally, Kochi', 'Large parking area with wide bays.', 40.00, 4.5);
+  ('Kochi Mall Parking',    'MG Road, Kochi',       'Covered parking with security and EV charging.', 45.00, 0.8),
+  ('Tech Park Central',     'Kakkanad, Kochi',       'Parking for office workers with CCTV.',          35.00, 1.5),
+  ('Marine Drive Plaza',    'Marine Drive, Kochi',   'Waterfront parking near the city.',              60.00, 2.2),
+  ('Railway Station West',  'Ernakulam Junction',    'Parking near railway station.',                  25.00, 3.0),
+  ('Lulu Hypermarket Lot',  'Edappally, Kochi',      'Large parking area with wide bays.',             40.00, 4.5);
 
 -- ------------------------------------------------------------
 -- Sample data: 5 slots (A1, A2, B1, B2, C1) for EVERY parking lot
 -- ------------------------------------------------------------
-INSERT INTO slots (lot_id, slot_number, is_available)
-SELECT id, 'A1', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'A1', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'A2', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'B1', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'B2', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'C1', TRUE FROM parking_lots;
 
-INSERT INTO slots (lot_id, slot_number, is_available)
-SELECT id, 'A2', TRUE FROM parking_lots;
+-- ------------------------------------------------------------
+-- Sample data: 2 users
+-- ------------------------------------------------------------
+INSERT INTO users (name, mobile_number)
+VALUES
+  ('Arun Kumar',   '9876543210'),
+  ('Sneha Menon',  '9123456780');
 
-INSERT INTO slots (lot_id, slot_number, is_available)
-SELECT id, 'B1', TRUE FROM parking_lots;
+-- ------------------------------------------------------------
+-- Sample data: 2 vehicles (one per user)
+-- ------------------------------------------------------------
+INSERT INTO vehicles (user_id, vehicle_number, vehicle_type, color)
+VALUES
+  ((SELECT id FROM users WHERE mobile_number = '9876543210'), 'KL07AB1234', 'Car',  'White'),
+  ((SELECT id FROM users WHERE mobile_number = '9123456780'), 'KL09CD5678', 'SUV',  'Black');
 
-INSERT INTO slots (lot_id, slot_number, is_available)
-SELECT id, 'B2', TRUE FROM parking_lots;
+-- ------------------------------------------------------------
+-- Sample data: 2 bookings
+-- ------------------------------------------------------------
+INSERT INTO bookings (user_id, vehicle_id, slot_id, booking_date, start_time, end_time, total_amount, payment_status, qr_code_hash)
+VALUES (
+  (SELECT id FROM users WHERE mobile_number = '9876543210'),
+  (SELECT id FROM vehicles WHERE vehicle_number = 'KL07AB1234'),
+  (SELECT s.id FROM slots s JOIN parking_lots p ON s.lot_id = p.id
+   WHERE p.name = 'Kochi Mall Parking' AND s.slot_number = 'A1' LIMIT 1),
+  CURRENT_DATE,
+  '10:00', '12:00',
+  90.00,
+  'paid',
+  'QR-ARUN-001'
+);
 
-INSERT INTO slots (lot_id, slot_number, is_available)
-SELECT id, 'C1', TRUE FROM parking_lots;
+INSERT INTO bookings (user_id, vehicle_id, slot_id, booking_date, start_time, end_time, total_amount, payment_status, qr_code_hash)
+VALUES (
+  (SELECT id FROM users WHERE mobile_number = '9123456780'),
+  (SELECT id FROM vehicles WHERE vehicle_number = 'KL09CD5678'),
+  (SELECT s.id FROM slots s JOIN parking_lots p ON s.lot_id = p.id
+   WHERE p.name = 'Tech Park Central' AND s.slot_number = 'B1' LIMIT 1),
+  CURRENT_DATE,
+  '09:00', '11:00',
+  70.00,
+  'pending',
+  'QR-SNEHA-001'
+);
 
--- Refresh Supabase so the app sees the new tables (keep this line)
+
+-- ============================================================
+-- DEMO QUERIES (DDL + DML)
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- DDL: Show all tables (PostgreSQL system catalog)
+-- ------------------------------------------------------------
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+
+
+-- ------------------------------------------------------------
+-- DML: SELECT — View all parking lots sorted by distance
+-- ------------------------------------------------------------
+SELECT name, location_name, hourly_rate, distance_km
+FROM parking_lots
+ORDER BY distance_km ASC;
+
+
+-- ------------------------------------------------------------
+-- DML: SELECT with JOIN — All bookings with full details
+-- (user name, vehicle, slot, lot name, time, amount)
+-- ------------------------------------------------------------
+SELECT
+  u.name          AS user_name,
+  u.mobile_number,
+  v.vehicle_number,
+  v.vehicle_type,
+  p.name          AS parking_lot,
+  p.location_name,
+  s.slot_number,
+  b.booking_date,
+  b.start_time,
+  b.end_time,
+  b.total_amount,
+  b.payment_status
+FROM bookings b
+JOIN users        u ON b.user_id    = u.id
+JOIN vehicles     v ON b.vehicle_id = v.id
+JOIN slots        s ON b.slot_id    = s.id
+JOIN parking_lots p ON s.lot_id     = p.id
+ORDER BY b.booking_date, b.start_time;
+
+
+-- ------------------------------------------------------------
+-- DML: SELECT with JOIN — Bookings for a specific user (by mobile)
+-- ------------------------------------------------------------
+SELECT
+  b.booking_date,
+  b.start_time,
+  b.end_time,
+  p.name     AS parking_lot,
+  s.slot_number,
+  b.total_amount,
+  b.payment_status
+FROM bookings b
+JOIN users        u ON b.user_id = u.id
+JOIN slots        s ON b.slot_id = s.id
+JOIN parking_lots p ON s.lot_id  = p.id
+WHERE u.mobile_number = '9876543210'
+ORDER BY b.booking_date DESC;
+
+
+-- ------------------------------------------------------------
+-- DML: SELECT — Available slots in a specific parking lot
+-- ------------------------------------------------------------
+SELECT
+  p.name AS parking_lot,
+  s.slot_number,
+  s.is_available
+FROM slots s
+JOIN parking_lots p ON s.lot_id = p.id
+WHERE p.name = 'Kochi Mall Parking'
+  AND s.is_available = TRUE
+ORDER BY s.slot_number;
+
+
+-- ------------------------------------------------------------
+-- DML: SELECT with Aggregate — Total revenue per parking lot
+-- ------------------------------------------------------------
+SELECT
+  p.name AS parking_lot,
+  COUNT(b.id)          AS total_bookings,
+  SUM(b.total_amount)  AS total_revenue
+FROM bookings b
+JOIN slots        s ON b.slot_id = s.id
+JOIN parking_lots p ON s.lot_id  = p.id
+WHERE b.payment_status = 'paid'
+GROUP BY p.name
+ORDER BY total_revenue DESC;
+
+
+-- ------------------------------------------------------------
+-- DML: UPDATE — Mark a booking as paid
+-- ------------------------------------------------------------
+UPDATE bookings
+SET payment_status = 'paid'
+WHERE qr_code_hash = 'QR-SNEHA-001';
+
+
+-- ------------------------------------------------------------
+-- DML: UPDATE — Change a user's mobile number
+-- ------------------------------------------------------------
+UPDATE users
+SET mobile_number = '9000000001'
+WHERE name = 'Arun Kumar';
+
+
+-- ------------------------------------------------------------
+-- DML: DELETE — Remove a cancelled booking
+-- ------------------------------------------------------------
+DELETE FROM bookings
+WHERE payment_status = 'cancelled'
+  AND booking_date < CURRENT_DATE;
+
+
+-- ------------------------------------------------------------
+-- DDL: DROP TABLE example (run only to reset/clean up)
+-- Drops in correct order to respect foreign key constraints
+-- ------------------------------------------------------------
+-- DROP TABLE IF EXISTS bookings;
+-- DROP TABLE IF EXISTS vehicles;
+-- DROP TABLE IF EXISTS slots;
+-- DROP TABLE IF EXISTS parking_lots;
+-- DROP TABLE IF EXISTS users;
+
+
+-- ============================================================
+-- Notify Supabase PostgREST to reload schema
+-- ============================================================
 NOTIFY pgrst, 'reload schema';

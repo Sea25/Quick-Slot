@@ -1,5 +1,4 @@
--- STEP 1: Run this first — deletes ALL QuickSlot tables and data
--- Safe to run even when tables do not exist yet
+
 
 DROP TABLE IF EXISTS bookings CASCADE;
 DROP TABLE IF EXISTS vehicles CASCADE;
