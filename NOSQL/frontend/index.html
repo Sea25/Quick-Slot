@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuickSlot — Parking Reviews</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header h1 { font-size: 1.2rem; font-weight: 600; }
+    header p  { font-size: 0.85rem; opacity: 0.6; }
+
+    .container { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+
+    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #1a1a2e; }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .field { margin-bottom: 0.9rem; }
+    .field label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.3rem; }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid #dde2ea;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    .btn {
+      padding: 0.55rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-danger  { background: none; border: 1px solid #e55; color: #e55; padding: 0.3rem 0.7rem; font-size: 0.8rem; border-radius: 6px; cursor: pointer; }
+    .btn-edit    { background: none; border: 1px solid #4f46e5; color: #4f46e5; padding: 0.3rem 0.7rem; font-size: 0.8rem; border-radius: 6px; cursor: pointer; margin-right: 6px; }
+
+    .review-item {
+      border: 1px solid #eef0f4;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .review-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .review-name { font-weight: 600; font-size: 0.95rem; }
+    .review-lot  { font-size: 0.8rem; color: #666; margin-top: 2px; }
+    .review-stars { color: #f59e0b; font-size: 1rem; letter-spacing: 2px; }
+    .review-comment { margin-top: 0.5rem; font-size: 0.9rem; color: #444; }
+    .review-date { font-size: 0.75rem; color: #aaa; margin-top: 0.4rem; }
+    .review-actions { margin-top: 0.7rem; }
+
+    .edit-form { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #eef0f4; display: none; }
+    .edit-form.open { display: block; }
+
+    .banner { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.88rem; margin-bottom: 1rem; }
+    .banner-error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .banner-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+    .empty { color: #888; font-size: 0.9rem; text-align: center; padding: 1.5rem 0; }
+
+    .stars-input { display: flex; gap: 6px; margin-top: 4px; }
+    .stars-input span { font-size: 1.4rem; cursor: pointer; color: #ccc; transition: color 0.15s; }
+    .stars-input span.active { color: #f59e0b; }
+
+    .filter-row { display: flex; gap: 0.7rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-row select { padding: 0.45rem 0.7rem; border: 1px solid #dde2ea; border-radius: 8px; font-size: 0.88rem; }
+    .filter-row label { font-size: 0.85rem; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>QuickSlot — Parking Reviews</h1>
+    <p>NoSQL prototype using MongoDB Atlas · Part B</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Add review form -->
+  <div class="card">
+    <h2>Write a review</h2>
+    <div id="form-error"  class="banner banner-error"   style="display:none"></div>
+    <div id="form-success" class="banner banner-success" style="display:none"></div>
+
+    <div class="field">
+      <label for="lot_id">Parking lot</label>
+      <select id="lot_id">
+        <option value="lot_001">Kochi Mall Parking — MG Road</option>
+        <option value="lot_002">Tech Park Central — Kakkanad</option>
+        <option value="lot_003">Marine Drive Plaza</option>
+        <option value="lot_004">Railway Station West</option>
+        <option value="lot_005">Lulu Hypermarket Lot</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="reviewer_name">Your name</label>
+      <input id="reviewer_name" type="text" placeholder="e.g. Arjun K" />
+    </div>
+
+    <div class="field">
+      <label>Rating</label>
+      <div class="stars-input" id="star-input">
+        <span data-val="1">★</span>
+        <span data-val="2">★</span>
+        <span data-val="3">★</span>
+        <span data-val="4">★</span>
+        <span data-val="5">★</span>
+      </div>
+      <input type="hidden" id="rating" value="0" />
+    </div>
+
+    <div class="field">
+      <label for="comment">Comment</label>
+      <textarea id="comment" placeholder="How was your experience?"></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="addReview()">Submit review</button>
+  </div>
+
+  <!-- Reviews list -->
+  <div class="card">
+    <h2>All reviews</h2>
+
+    <div class="filter-row">
+      <label for="filter-lot">Filter by lot:</label>
+      <select id="filter-lot" onchange="loadReviews()">
+        <option value="">All lots</option>
+        <option value="lot_001">Kochi Mall Parking</option>
+        <option value="lot_002">Tech Park Central</option>
+        <option value="lot_003">Marine Drive Plaza</option>
+        <option value="lot_004">Railway Station West</option>
+        <option value="lot_005">Lulu Hypermarket Lot</option>
+      </select>
+    </div>
+
+    <div id="reviews-list"><p class="empty">Loading reviews…</p></div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
