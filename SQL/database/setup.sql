@@ -44,6 +44,8 @@ CREATE TABLE slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lot_id UUID NOT NULL REFERENCES parking_lots(id) ON DELETE CASCADE,
   slot_number TEXT NOT NULL,
+  type TEXT DEFAULT 'regular' CHECK (type IN ('regular', 'premium', 'disabled')),
+  level TEXT DEFAULT 'Ground Floor',
   is_available BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW(),
   UNIQUE (lot_id, slot_number)
@@ -159,13 +161,20 @@ VALUES
   ('Lulu Hypermarket Lot',  'Edappally, Kochi',      'Large parking area with wide bays.',             40.00, 4.5);
 
 -- ------------------------------------------------------------
--- Sample data: 5 slots (A1, A2, B1, B2, C1) for EVERY parking lot
+-- Sample data: 10 slots for EVERY parking lot
+-- A1-A5 (top row), B1-B5 (bottom row)
 -- ------------------------------------------------------------
-INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'A1', TRUE FROM parking_lots;
-INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'A2', TRUE FROM parking_lots;
-INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'B1', TRUE FROM parking_lots;
-INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'B2', TRUE FROM parking_lots;
-INSERT INTO slots (lot_id, slot_number, is_available) SELECT id, 'C1', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'A1', 'regular', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'A2', 'regular', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'A3', 'premium', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'A4', 'disabled', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'A5', 'regular', 'Ground Floor', TRUE FROM parking_lots;
+
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'B1', 'regular', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'B2', 'regular', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'B3', 'premium', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'B4', 'disabled', 'Ground Floor', TRUE FROM parking_lots;
+INSERT INTO slots (lot_id, slot_number, type, level, is_available) SELECT id, 'B5', 'regular', 'Ground Floor', TRUE FROM parking_lots;
 
 -- ------------------------------------------------------------
 -- Sample data: 2 users

@@ -138,4 +138,44 @@ router.get('/:lotId/available-slot', async (req, res) => {
   }
 });
 
+router.get('/:lotId/slots-availability', async (req, res) => {
+  try {
+    const { lotId } = req.params;
+    const { date, startTime, duration } = req.query;
+
+    if (!date || !startTime || !duration) {
+      return res.status(400).json({ error: 'date, startTime, and duration are required' });
+    }
+
+    const durationHours = parseInt(duration, 10);
+    const endTime = addHoursToTime(startTime.length === 5 ? `${startTime}:00` : startTime, durationHours);
+    const start = startTime.length === 5 ? `${startTime}:00` : startTime;
+
+    const { data: slots } = await supabase.from('slots').select('*').eq('lot_id', lotId).order('slot_number');
+
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('slot_id, start_time, end_time')
+      .eq('booking_date', date)
+      .neq('payment_status', 'cancelled');
+
+    const bookedIds = new Set();
+    for (const b of bookings || []) {
+      if (b.start_time < endTime && start < b.end_time) {
+        bookedIds.add(b.slot_id);
+      }
+    }
+
+    const slotsWithAvailability = (slots || []).map((s) => ({
+      ...s,
+      is_available: !bookedIds.has(s.id),
+    }));
+
+    return res.json({ slots: slotsWithAvailability, endTime });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message || 'Slots availability check failed' });
+  }
+});
+
 export default router;

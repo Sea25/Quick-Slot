@@ -47,6 +47,11 @@ export const api = {
 
   getLot: (lotId) => request(`/parking/${lotId}`),
 
+  getSlotsAvailability: (lotId, params) => {
+    const q = new URLSearchParams(params).toString();
+    return request(`/parking/${lotId}/slots-availability?${q}`);
+  },
+
   createBooking: (body) =>
     request('/bookings', { method: 'POST', body: JSON.stringify(body) }),
 

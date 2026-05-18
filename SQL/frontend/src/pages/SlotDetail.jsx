@@ -30,8 +30,10 @@ export default function SlotDetail() {
   const search = getSearchParams();
 
   const [lot, setLot] = useState(null);
+  const [slots, setSlots] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
@@ -46,21 +48,37 @@ export default function SlotDetail() {
       return;
     }
 
-    Promise.all([api.getLot(lotId), api.getVehicles()])
-      .then(([{ lot: lotData }, { vehicles: vehicleList }]) => {
+    Promise.all([
+      api.getLot(lotId),
+      api.getVehicles(),
+      api.getSlotsAvailability(lotId, {
+        date: search.date,
+        startTime: search.startTime,
+        duration,
+      })
+    ])
+      .then(([{ lot: lotData }, { vehicles: vehicleList }, { slots: slotsData }]) => {
         setLot(lotData);
         setVehicles(vehicleList || []);
+        setSlots(slotsData || []);
         if (vehicleList?.length === 1) {
           setSelectedVehicleId(vehicleList[0].id);
         }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [lotId, navigate, search.date]);
+  }, [lotId, navigate, search.date, search.startTime, duration]);
+
+  const topRow = slots.filter((s) => s.slot_number.startsWith('A'));
+  const bottomRow = slots.filter((s) => s.slot_number.startsWith('B'));
 
   const handleConfirm = async () => {
     if (!selectedVehicleId) {
       setError('Please select which vehicle you are bringing.');
+      return;
+    }
+    if (!selectedSlotId) {
+      setError('Please select an available parking slot from the map.');
       return;
     }
 
@@ -70,6 +88,7 @@ export default function SlotDetail() {
       const { booking: created } = await api.createBooking({
         lot_id: lotId,
         vehicle_id: selectedVehicleId,
+        slot_id: selectedSlotId,
         booking_date: search.date,
         start_time: search.startTime,
         duration_hours: duration,
@@ -187,13 +206,56 @@ export default function SlotDetail() {
           </div>
         )}
 
+        <h3 style={{ fontSize: '0.9rem', margin: '1.25rem 0 0.75rem' }}>
+          Select a Parking Slot
+        </h3>
+
+        <div className="parking-map">
+          {slots.length > 0 && <div className="parking-level-title">{slots[0].level}</div>}
+          <div className="parking-row">
+            {topRow.map((slot) => (
+              <div
+                key={slot.id}
+                onClick={() => slot.is_available && setSelectedSlotId(slot.id)}
+                className={`parking-slot ${slot.is_available ? 'available' : 'occupied'} ${
+                  selectedSlotId === slot.id ? 'selected' : ''
+                }`}
+              >
+                {slot.type === 'disabled' && <div className="slot-icon">♿</div>}
+                {slot.type === 'premium' && <div className="slot-icon">⭐</div>}
+                <span>{slot.slot_number}</span>
+              </div>
+            ))}
+          </div>
+          
+          <div className="parking-road">
+            <span style={{color: 'white', position: 'absolute', left: '10px', fontSize: '10px'}}>ENTRY / EXIT</span>
+          </div>
+
+          <div className="parking-row">
+            {bottomRow.map((slot) => (
+              <div
+                key={slot.id}
+                onClick={() => slot.is_available && setSelectedSlotId(slot.id)}
+                className={`parking-slot ${slot.is_available ? 'available' : 'occupied'} ${
+                  selectedSlotId === slot.id ? 'selected' : ''
+                }`}
+              >
+                {slot.type === 'disabled' && <div className="slot-icon">♿</div>}
+                {slot.type === 'premium' && <div className="slot-icon">⭐</div>}
+                <span>{slot.slot_number}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {error && <p className="error-banner" style={{ marginTop: '1rem' }}>{error}</p>}
 
         <button
           type="button"
           className="btn btn-primary"
           style={{ marginTop: '1.25rem' }}
-          disabled={booking || vehicles.length === 0 || !selectedVehicleId}
+          disabled={booking || vehicles.length === 0 || !selectedVehicleId || !selectedSlotId}
           onClick={handleConfirm}
         >
           {booking ? 'Confirming…' : 'Confirm booking & pay'}

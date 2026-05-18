@@ -799,3 +799,102 @@ select {
   color: var(--color-primary);
   border: 1px solid rgba(45, 212, 191, 0.25);
 }
+
+/* ——— Parking Map ——— */
+.parking-map {
+  background: #2b2b2b;
+  border-radius: var(--radius);
+  padding: 2rem;
+  margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.parking-road {
+  height: 60px;
+  background: #333;
+  width: calc(100% + 4rem);
+  margin-left: -2rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.parking-road::after {
+  content: '';
+  width: 100%;
+  height: 4px;
+  background-image: linear-gradient(to right, #ffcc00 50%, transparent 50%);
+  background-size: 40px 100%;
+}
+
+.parking-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.parking-slot {
+  width: 50px;
+  height: 80px;
+  border: 2px solid white;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.parking-slot.available {
+  border-color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.15);
+}
+.parking-slot.available:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(45, 212, 191, 0.4);
+}
+
+.parking-slot.occupied {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+  cursor: not-allowed;
+}
+.parking-slot.occupied::after {
+  content: '🚗';
+  font-size: 1.5rem;
+  position: absolute;
+}
+
+.parking-slot.selected {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.3);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+}
+
+.parking-slot span {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #fff;
+  z-index: 1;
+}
+
+.parking-slot .slot-icon {
+  font-size: 1.25rem;
+  opacity: 0.8;
+}
+
+.parking-level-title {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}

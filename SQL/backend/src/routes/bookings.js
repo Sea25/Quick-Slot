@@ -8,10 +8,10 @@ const router = Router();
 
 router.post('/', validateUser, async (req, res) => {
   try {
-    const { lot_id, vehicle_id, booking_date, start_time, duration_hours } = req.body;
+    const { lot_id, vehicle_id, slot_id, booking_date, start_time, duration_hours } = req.body;
 
-    if (!lot_id || !vehicle_id || !booking_date || !start_time || !duration_hours) {
-      return res.status(400).json({ error: 'Please select a vehicle and fill all booking details' });
+    if (!lot_id || !vehicle_id || !slot_id || !booking_date || !start_time || !duration_hours) {
+      return res.status(400).json({ error: 'Please select a vehicle, a slot, and fill all booking details' });
     }
 
     const { data: vehicle } = await supabase
@@ -57,9 +57,8 @@ router.post('/', validateUser, async (req, res) => {
       }
     }
 
-    const freeSlot = (slots || []).find((s) => !bookedIds.has(s.id));
-    if (!freeSlot) {
-      return res.status(409).json({ error: 'No slots available' });
+    if (bookedIds.has(slot_id)) {
+      return res.status(409).json({ error: 'Selected slot is already booked for this time' });
     }
 
     const { data: booking, error } = await supabase
@@ -67,7 +66,7 @@ router.post('/', validateUser, async (req, res) => {
       .insert({
         user_id: req.userId,
         vehicle_id,
-        slot_id: freeSlot.id,
+        slot_id,
         booking_date,
         start_time: start,
         end_time,
